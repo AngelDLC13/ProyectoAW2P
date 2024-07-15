@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Tabla de Laboratorios</title>
+    <!-- Prueba con otra URL del CDN -->
+    <script src="https://unpkg.com/vue@2.6.14/dist/vue.js"></script>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <table>
+            <thead>
+                <tr>
+                    <th>Laboratorio</th>
+                    <th>Fecha</th>
+                    <th>Horarios Ocupados</th>
+                    <th>Horarios Libres</th>
+                    <th>Ocupante</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="lab in laboratorios" :key="lab.nombre">
+                    <td>{{ lab.nombre }}</td>
+                    <td>{{ selectedDate }}</td>
+                    <td>{{ lab.reservas[selectedDate] ? lab.reservas[selectedDate].ocupadas.join(', ') : 'N/A' }}</td>
+                    <td>{{ lab.reservas[selectedDate] ? horariosLibres(lab.reservas[selectedDate].ocupadas) : 'N/A' }}</td>
+                    <td>{{ lab.reservas[selectedDate] ? lab.reservas[selectedDate].ocupante : 'N/A' }}</td>
+                    <td>{{ labEstado(lab) }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <label for="selectDate">Seleccione una fecha:</label>
+        <select v-model="selectedDate" id="selectDate">
+            <option v-for="date in next7Days" :value="date">{{ date }}</option>
+        </select>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            new Vue({
+                el: '#app',
+                data: {
+                    laboratorios: [
+                        { nombre: 'Lab 101', reservas: {} },
+                        { nombre: 'Lab de Redes', reservas: {} },
+                        { nombre: 'Lab de Electrónica', reservas: {} },
+                        { nombre: 'Lab 201', reservas: {} },
+                        { nombre: 'Lab 202', reservas: {} },
+                        { nombre: 'Lab 206', reservas: {} }
+                    ],
+                    selectedDate: null,
+                    horarios: [
+                        "07:00-08:00", "08:00-09:00", "09:00-10:00", "10:00-11:00",
+                        "11:00-12:00", "12:00-13:00", "13:00-14:00", "14:00-15:00",
+                        "15:00-16:00", "16:00-17:00", "17:00-18:00", "18:00-19:00",
+                        "19:00-20:00"
+                    ]
+                },
+                computed: {
+                    next7Days() {
+                        const today = new Date();
+                        const dates = [];
+                        for (let i = 0; i < 7; i++) {
+                            const date = new Date(today);
+                            date.setDate(today.getDate() + i);
+                            dates.push(date.toISOString().split('T')[0]);
+                        }
+                        return dates;
+                    }
+                },
+                created() {
+                    this.selectedDate = this.next7Days[0];
+                    this.cargarReservas();
+                },
+                methods: {
+                    cargarReservas() {
+                        const reservas = JSON.parse(localStorage.getItem('reservas')) || [];
+                        reservas.forEach(reserva => {
+                            this.laboratorios.forEach(lab => {
+                                if (lab.nombre === reserva.laboratorio) {
+                                    if (!lab.reservas[reserva.fecha]) {
+                                        lab.reservas[reserva.fecha] = {
+                                            ocupadas: [],
+                                            ocupante: reserva.ocupante
+                                        };
+                                    }
+                                    reserva.horarios.forEach(horario => {
+                                        lab.reservas[reserva.fecha].ocupadas.push(horario);
+                                    });
+                                }
+                            });
+                        });
+                    },
+                    horariosLibres(ocupadas) {
+                        return this.horarios.filter(horario => !ocupadas.includes(horario)).join(', ');
+                    },
+                    labEstado(lab) {
+                        if (!lab.reservas[this.selectedDate]) return 'Libre';
+                        return lab.reservas[this.selectedDate].ocupadas.length ? 'Ocupado' : 'Libre';
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
